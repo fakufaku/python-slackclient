@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # mostly a proxy object to abstract how some of this works
 
-import json
+import ujson as json
 import logging
 
 from .server import Server
@@ -50,12 +50,14 @@ class SlackClient(object):
             False on exceptions
         '''
 
-        try:
-            self.server.rtm_connect(use_rtm_start=with_team_state, **kwargs)
-            return self.server.connected
+        #try:
+        self.server.rtm_connect(use_rtm_start=with_team_state, **kwargs)
+        return self.server.connected
+        '''
         except Exception:
-            LOG.warn("Failed RTM connect", exc_info=True)
+            LOG.warning("Failed RTM connect")
             return False
+        '''
 
     def api_call(self, method, timeout=None, **kwargs):
         '''

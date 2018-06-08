@@ -4,16 +4,12 @@ from .slackrequest import SlackRequest
 from .user import User
 from .util import SearchList, SearchDict
 
-import json
+import ujson
 import logging
 import time
 import random
 
-from requests.packages.urllib3.util.url import parse_url
-from ssl import SSLError
-from websocket import create_connection
-from websocket._exceptions import WebSocketConnectionClosedException
-
+import uwebsockets.client
 
 class Server(object):
     """
@@ -101,6 +97,10 @@ class Server(object):
 
         """
 
+        # make sure the socket is closed before trying again
+        if reconnect:
+            self.websocket.close()
+
         # rtm.start returns user and channel info, rtm.connect does not.
         connect_method = "rtm.start" if use_rtm_start else "rtm.connect"
 
@@ -165,25 +165,29 @@ class Server(object):
     def connect_slack_websocket(self, ws_url):
         """Uses http proxy if available"""
         if self.proxies and 'http' in self.proxies:
+            '''
             parts = parse_url(self.proxies['http'])
             proxy_host, proxy_port = parts.host, parts.port
             auth = parts.auth
             proxy_auth = auth and auth.split(':')
+            '''
+            proxy_auth, proxy_port, proxy_host = None, None, None
+            print('Warning: proxies are not implemented')
         else:
             proxy_auth, proxy_port, proxy_host = None, None, None
 
-        try:
-            self.websocket = create_connection(ws_url,
-                                               http_proxy_host=proxy_host,
-                                               http_proxy_port=proxy_port,
-                                               http_proxy_auth=proxy_auth)
-            self.connected = True
-            self.last_connected_at = time.time()
-            logging.debug("RTM connected")
-            self.websocket.sock.setblocking(0)
+        #try:
+        self.websocket = uwebsockets.client.connect(ws_url)
+
+        self.connected = True
+        self.last_connected_at = time.time()
+        logging.debug("RTM connected")
+        self.websocket.sock.setblocking(0)
+        '''
         except Exception as e:
             self.connected = False
             raise SlackConnectionError(message=str(e))
+        '''
 
     def parse_channel_data(self, channel_data):
         for channel in channel_data:
@@ -219,7 +223,7 @@ class Server(object):
 
         """
         try:
-            data = json.dumps(data)
+            data = ujson.dumps(data)
             self.websocket.send(data)
         except Exception:
             self.rtm_connect(reconnect=True)
@@ -260,25 +264,7 @@ class Server(object):
 
         data = ""
         while True:
-            try:
-                data += "{0}\n".format(self.websocket.recv())
-            except SSLError as e:
-                if e.errno == 2:
-                    # errno 2 occurs when trying to read or write data, but more
-                    # data needs to be received on the underlying TCP transport
-                    # before the request can be fulfilled.
-                    #
-                    # Python 2.7.9+ and Python 3.3+ give this its own exception,
-                    # SSLWantReadError
-                    return ''
-                raise
-            except WebSocketConnectionClosedException as e:
-                logging.debug("RTM disconnected")
-                self.connected = False
-                if self.auto_reconnect:
-                    self.rtm_connect(reconnect=True)
-                else:
-                    raise SlackConnectionError("Unable to send due to closed RTM websocket")
+            data += "{0}\n".format(self.websocket.recv())
             return data.rstrip()
 
     def attach_user(self, name, user_id, real_name, tz, email):
@@ -335,9 +321,12 @@ class Server(object):
             See here for more information on responses: https://api.slack.com/web
         """
         response = self.api_requester.do(self.token, method, kwargs, timeout=timeout)
-        response_json = json.loads(response.text)
-        response_json["headers"] = dict(response.headers)
-        return json.dumps(response_json)
+        response_text = response.text
+
+        # seems in micropython urequests, the response doesn't contain the headers as such
+        #response_json["headers"] = dict(response.headers)
+
+        return response_text
 
 # TODO: Move the error types defined below into the .exceptions namespace. This would be a semver
 # major change because any clients already referencing these types in order to catch them

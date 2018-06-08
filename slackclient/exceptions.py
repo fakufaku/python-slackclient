@@ -9,7 +9,7 @@ class SlackClientError(Exception):
         super(SlackClientError, self).__init__(msg)
 
 
-class ParseResponseError(SlackClientError, ValueError):
+class ParseResponseError(SlackClientError):
     """
     Error raised when responses to Web API methods cannot be parsed as valid JSON
     """

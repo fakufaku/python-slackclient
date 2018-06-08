@@ -1,8 +1,7 @@
-import requests
-import json
-import six
+import urequests
+import ujson
 import sys
-import platform
+import uos
 from .version import __version__
 
 
@@ -13,11 +12,17 @@ class SlackRequest(object):
         client_name = __name__.split('.')[0]
         client_version = __version__  # Version is returned from version.py
 
+        try:
+            uname = uos.uname()
+            system_str = "{0}".format(uname.sysname, uname.release)
+        except:
+            system_str = "unknown"
+
         # Construct the user-agent header with the package info, Python version and OS version.
         self.default_user_agent = {
             "client": "{0}/{1}".format(client_name, client_version),
-            "python": "Python/{v.major}.{v.minor}.{v.micro}".format(v=sys.version_info),
-            "system": "{0}/{1}".format(platform.system(), platform.release())
+            "python": "Python/{0}.{1}.{2}".format(*sys.version_info),
+            "system": system_str,
         }
 
         self.custom_user_agent = None
@@ -67,7 +72,8 @@ class SlackRequest(object):
         # Set user-agent and auth headers
         headers = {
             'user-agent': self.get_user_agent(),
-            'Authorization': 'Bearer {}'.format(token)
+            'Authorization': 'Bearer {}'.format(token),
+            'Content-Type' : 'text/plain',
         }
 
         # Pull file out so it isn't JSON encoded like normal fields.
@@ -81,25 +87,34 @@ class SlackRequest(object):
         # Move file content into requests' `files` param
         files = None
         if request in upload_requests:
-            files = {'file': post_data.pop('file')} if 'file' in post_data else None
+            #files = {'file': post_data.pop('file')} if 'file' in post_data else None
+            raise ValueError('Upload is not supported')
 
         # Check for plural fields and convert them to comma-separated strings if needed
         for field in {'channels', 'users', 'types'} & set(post_data.keys()):
             if isinstance(post_data[field], list):
                 post_data[field] = ",".join(post_data[field])
 
+
         # Convert any params which are list-like to JSON strings
         # Example: `attachments` is a dict, and needs to be passed as JSON
-        for k, v in six.iteritems(post_data):
+        for k, v in post_data.items():
             if isinstance(v, (list, dict)):
                 post_data[k] = json.dumps(v)
 
+        post_data = ujson.dumps(post_data).encode('utf-8')
+
         # Submit the request
-        return requests.post(
-            url,
-            headers=headers,
-            data=post_data,
-            files=files,
-            timeout=timeout,
-            proxies=self.proxies
-        )
+        response = urequests.post(
+                url,
+                headers=headers,
+                data=post_data,
+                #files=files,
+                #timeout=timeout,
+                #proxies=self.proxies
+                )
+
+        # Cache the content (and close the socket)
+        response.content
+
+        return response
