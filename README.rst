@@ -1,45 +1,36 @@
-python-slackclient
-===================
+uslackclient
+============
 
 A client for Slack, which supports the Slack Web API and Real Time Messaging (RTM) API.
-
-|build-status| |windows-build-status| |codecov| |doc-status| |pypi-version| |python-version|
-
-.. |build-status| image:: https://travis-ci.org/slackapi/python-slackclient.svg?branch=master
-    :target: https://travis-ci.org/slackapi/python-slackclient
-.. |windows-build-status| image:: https://ci.appveyor.com/api/projects/status/rif04t60ptslj32x/branch/master?svg=true
-    :target: https://ci.appveyor.com/project/slackapi/python-slackclient
-.. |codecov| image:: https://codecov.io/gh/slackapi/python-slackclient/branch/master/graph/badge.svg
-    :target: https://codecov.io/gh/slackapi/python-slackclient
-.. |doc-status| image:: https://readthedocs.org/projects/python-slackclient/badge/?version=latest
-    :target: http://python-slackclient.readthedocs.io/en/latest/?badge=latest
-.. |pypi-version| image:: https://badge.fury.io/py/slackclient.svg
-    :target: https://pypi.python.org/pypi/slackclient
-.. |python-version| image:: https://img.shields.io/pypi/pyversions/slackclient.svg
-    :target: https://pypi.python.org/pypi/slackclient
 
 About this fork
 ---------------
 
-*This is a port of
-[python-slackclient](https://github.com/slackapi/python-slackclient) to work
-with [micropython](https://micropython.org) on the ESP32*
+**This is a port of** `python-slackclient <https://github.com/slackapi/python-slackclient>`_ **to work
+with** `micropython <https://micropython.org>`_ **on the ESP32**
 
 The original code has been modified to make use of the micropython variants of
 some of the standard python library. Namely, the following substitutions have
 been made:
 
-* websockets -> [danni/uwebsockets](https://github.com/danni/uwebsockets)
+* websockets -> `fakufaku/uwebsockets <https://github.com/fakufaku/uwebsockets>`_ (fork of `danni/uwebsockets <https://github.com/danni/uwebsockets>`_)
 * json -> ujson
 * requests -> urequests
 
-*Important Limitation*: Due to RAM limitationas on the ESP32 platform, it seems
-[only one SSL socket can be created](https://github.com/micropython/micropython/issues/3650).
-This means that when connected to the RTM API (via a secure websocket), it is
-not possible to send API requests (to `https://slack.com/api`).
+**Warning**: This port is still experimental and many of the exception catching
+has been removed for convenience or due to lack of features of the micropython modules.
 
-To use the package on the ESP32, upload the `slackclient` folder onto the
-ESP32, for example with the [ampy tool](https://github.com/adafruit/ampy).
+**Important Limitation**: 
+
+* Due to RAM limitationas on the ESP32 platform, it seems
+  `only one SSL socket can be created <https://github.com/micropython/micropython/issues/3650>`_.
+  This means that when connected to the RTM API (via a secure websocket), it is
+  not possible to send API requests (to ``https://slack.com/api``).
+* File upload is not supported at this time.
+
+To use the package on the ESP32, upload the ``slackclient`` folder onto the
+ESP32, for example with the `ampy tool <https://github.com/adafruit/ampy>`_.
+You will also need to install ``uwebsockets``, which requires to have the ``logging`` module installed. The latter can obtained from the `micropython-lib <https://github.com/micropython/micropython-lib>`_.
 
 Overview
 --------
