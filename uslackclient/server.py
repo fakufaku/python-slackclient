@@ -10,6 +10,7 @@ import time
 import random
 
 import uwebsockets.client
+from uwebsockets.protocol import ConnectionClosed
 
 class Server(object):
     """
@@ -264,7 +265,11 @@ class Server(object):
 
         data = ""
         while True:
-            data += "{0}\n".format(self.websocket.recv())
+            try:
+                data += "{0}\n".format(self.websocket.recv())
+            except ConnectionClosed:
+                print("Websocket is dead. Restarting connection.")
+                self.rtm_connect(reconnect=True)
             return data.rstrip()
 
     def attach_user(self, name, user_id, real_name, tz, email):
